@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rag-firewall"
+version = "0.1.0"
+description = "Defense-in-depth proxy for LLM APIs: prompt-injection, tool allowlist, output PII/secret scanning."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [{ name = "Ram Prakash Dhulipudi" }]
+keywords = ["llm", "security", "prompt-injection", "rag", "ai-safety", "observability"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Topic :: Security",
+]
+dependencies = [
+  "fastapi>=0.115.0",
+  "uvicorn[standard]>=0.32.0",
+  "pydantic>=2.9",
+  "pydantic-settings>=2.5",
+  "httpx>=0.27",
+  "structlog>=24.4",
+]
+
+[project.urls]
+Homepage = "https://github.com/Ramdragneel01/rag-firewall"
+Repository = "https://github.com/Ramdragneel01/rag-firewall"
+Issues = "https://github.com/Ramdragneel01/rag-firewall/issues"
+
+[project.scripts]
+rag-firewall = "rag_firewall.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501"]

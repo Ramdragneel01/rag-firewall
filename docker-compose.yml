@@ -1,0 +1,24 @@
+services:
+  rag-firewall:
+    build: .
+    image: ghcr.io/ramdragneel01/rag-firewall:dev
+    container_name: rag-firewall
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      RAGFW_HOST: 0.0.0.0
+      RAGFW_PORT: 8080
+      RAGFW_LOG_LEVEL: INFO
+      RAGFW_UPSTREAM_BASE_URL: ${RAGFW_UPSTREAM_BASE_URL:-https://api.openai.com}
+      RAGFW_UPSTREAM_API_KEY: ${RAGFW_UPSTREAM_API_KEY:-}
+      RAGFW_INJECTION_THRESHOLD: ${RAGFW_INJECTION_THRESHOLD:-0.6}
+      RAGFW_TOOL_ALLOWLIST: ${RAGFW_TOOL_ALLOWLIST:-}
+      RAGFW_ENABLE_INPUT_SCANNER: "true"
+      RAGFW_ENABLE_OUTPUT_SCANNER: "true"
+      RAGFW_ENABLE_TOOL_ALLOWLIST: "true"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8080/health',timeout=3).status==200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

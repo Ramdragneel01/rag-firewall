@@ -1,0 +1,72 @@
+name: ci
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+          pip install -e .
+      - name: Lint
+        run: ruff check src tests
+      - name: Test
+        run: pytest --cov=rag_firewall --cov-report=term-missing
+
+  docker:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t rag-firewall:ci .
+      - name: Smoke test container
+        run: |
+          docker run -d --name ragfw -p 8080:8080 \
+            -e RAGFW_UPSTREAM_BASE_URL=https://api.openai.com \
+            -e RAGFW_UPSTREAM_API_KEY=dummy \
+            rag-firewall:ci
+          for i in {1..30}; do
+            if curl -fsS http://localhost:8080/health; then echo OK; break; fi
+            sleep 1
+          done
+          curl -fsS http://localhost:8080/health
+          curl -fsS http://localhost:8080/metrics | head -n 5
+          docker logs ragfw
+          docker rm -f ragfw
+
+  publish:
+    needs: docker
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build & push
+        run: |
+          IMAGE=ghcr.io/${{ github.repository_owner }}/rag-firewall
+          TAG=${GITHUB_REF_NAME}
+          docker build -t $IMAGE:$TAG -t $IMAGE:latest .
+          docker push $IMAGE:$TAG
+          docker push $IMAGE:latest
